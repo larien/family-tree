@@ -3,7 +3,9 @@ package repository
 // Repositories contains all Repositories interface from different domains.
 // When creating a new domain, its interface should be placed here in
 // order to external layers have access to its methods.
-type Repositories struct {}
+type Repositories struct {
+	Person PersonRepository
+}
 
 
 // New creates a Repository layer and shares its reference to the external
@@ -12,6 +14,7 @@ type Repositories struct {}
 // is placed according to each domain.
 func New() *Repositories {
 	return &Repositories{
+		Person: newPersonRepository(),
 		// implement repository domains here
 	}
 }
