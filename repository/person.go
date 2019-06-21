@@ -22,7 +22,30 @@ type Person struct {
 // PersonRepository defines the method available from Person Repository
 // domain to be used by external layers.
 type PersonRepository interface {
-	HelloWorld() error
+    HelloWorld() error
+    Add(string) error
+}
+
+// Add creates a new Person in the database with label and attribute name.
+func (p *Person) Add(name string) error {
+    query := fmt.Sprintf("CREATE (%s:Person) SET %s.name = $name;", name, name)
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{"name": name})
+        if err != nil {
+            return nil, err
+        }
+        if result.Next() {
+            return result.Record().GetByIndex(0), nil
+        }
+
+        return nil, result.Err()
+    })
+    if err != nil {
+        return err
+	}
+	return nil
 }
 
 func (p *Person) HelloWorld() error {
