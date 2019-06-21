@@ -32,19 +32,13 @@ func (p *Person) Add(name string) error {
     _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
         result, err := transaction.Run(
             query,
-            map[string]interface{}{"name": name})
-        if err != nil {
-            return nil, err
-        }
-        if result.Next() {
-            return result.Record().GetByIndex(0), nil
-        }
-
+            map[string]interface{}{"name": name}
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
         return nil, result.Err()
     })
-    if err != nil {
-        return err
-	}
+    if err != nil {return err}
 	return nil
 }
 
