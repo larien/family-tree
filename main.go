@@ -11,7 +11,12 @@ import (
 func main(){
 	fmt.Println("Hello, Mundipagg!")
 
-	r := repository.New()
+	r, err := repository.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r.Person.HelloWorld()
+	
 	log.Println("Repository layer created")
 
 	c := controller.New(r)
@@ -19,4 +24,7 @@ func main(){
 
 	delivery.New(c)
 	log.Println("Delivery layer created")
+
+	r.DB.Session.Close()
+	r.DB.Driver.Close()
 }
