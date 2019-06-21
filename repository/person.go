@@ -24,6 +24,8 @@ type Person struct {
 type PersonRepository interface {
     HelloWorld() error
     Add(string) error
+    Parent(string, string) error
+    Clear() error
 }
 
 // Add creates a new Person in the database with label and attribute name.
@@ -32,7 +34,39 @@ func (p *Person) Add(name string) error {
     _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
         result, err := transaction.Run(
             query,
-            map[string]interface{}{"name": name}
+            map[string]interface{}{"name": name},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// Parent creates a new property to the received Person.
+func (p *Person) Parent(parent, child string) error {
+    query := fmt.Sprintf("MATCH (a:Person {name:'%s'}), (b:Person {name:'%s'}) CREATE (a)-[:PARENT]->(b)", parent, child)
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// Clear removes all nodes and relationships from the database.
+func (p *Person) Clear() error {
+    query := `MATCH (n) DETACH DELETE n`
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
         )
         if err != nil {return nil, err}
         if result.Next() {return result.Record().GetByIndex(0), nil}
