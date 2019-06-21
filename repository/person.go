@@ -46,6 +46,7 @@ func (p *Person) Add(name string) error {
 
 // Parent creates a new property to the received Person.
 func (p *Person) Parent(parent, child string) error {
+    // create parent-child relationship
     query := fmt.Sprintf("MATCH (a:Person {name:'%s'}), (b:Person {name:'%s'}) CREATE (a)-[:PARENT]->(b)", parent, child)
     _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
         result, err := transaction.Run(
@@ -57,6 +58,33 @@ func (p *Person) Parent(parent, child string) error {
         return nil, result.Err()
     })
     if err != nil {return err}
+
+    // create parents attribute in child
+    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.parents = COALESCE(n.parents, []) + '%s'", child, parent)
+    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+
+    // create children attribute in parent
+    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.children = COALESCE(n.children, []) + '%s'", parent, child)
+    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+
 	return nil
 }
 
