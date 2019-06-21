@@ -15,7 +15,6 @@ func main(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	r.Person.Add("Lauren")
 	
 	log.Println("Repository layer created")
 
