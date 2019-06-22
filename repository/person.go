@@ -26,7 +26,6 @@ type PersonRepository interface {
     Retrieve(string) (*entity.Person, error)
     Add(string) error
     Parent(string, string) error
-    HelloWorld() error
     Clear() error
 }
 
@@ -143,29 +142,6 @@ func (p *Person) Clear() error {
         return nil, result.Err()
     })
     if err != nil {return err}
-	return nil
-}
-
-func (p *Person) HelloWorld() error {
-	greeting, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            "CREATE (a:Greeting) SET a.message = $message RETURN a.message + ', from node ' + id(a)",
-            map[string]interface{}{"message": "hello, world"})
-        if err != nil {
-            return nil, err
-        }
-
-        if result.Next() {
-            return result.Record().GetByIndex(0), nil
-        }
-
-        return nil, result.Err()
-    })
-    if err != nil {
-        return err
-	}
-	
-	fmt.Println(greeting.(string))
 	return nil
 }
 
