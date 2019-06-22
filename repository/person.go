@@ -1,9 +1,10 @@
 package repository
 
 import (
+    "github.com/larien/family-tree/entity"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"log"
-	"fmt"
+    "fmt"
 )
 
 // newPersonRepository applies database connection in Person
@@ -22,10 +23,55 @@ type Person struct {
 // PersonRepository defines the method available from Person Repository
 // domain to be used by external layers.
 type PersonRepository interface {
-    HelloWorld() error
+    Retrieve(string) (*entity.Person, error)
     Add(string) error
     Parent(string, string) error
     Clear() error
+}
+
+// Retrieve returns a Person from the database..
+func (p *Person) Retrieve(name string) (*entity.Person, error) {
+    query := fmt.Sprintf("MATCH (n: Person {name: '%s'}) RETURN n.parents as parents, n.children as children", name)
+    person, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{})
+        if err != nil {
+            return nil, err
+        }
+        for result.Next() {
+            record := result.Record()
+            parents, ok := record.Get("parents")
+            if !ok {return nil, fmt.Errorf("Couldn't get children")}
+            children, ok := record.Get("children")
+            if !ok {return nil, fmt.Errorf("Couldn't get children")}
+            
+            p, err := parseInterfaceToString(parents)
+            if err != nil {return nil, err}
+
+            var c []string
+            if children != nil {
+                c, err = parseInterfaceToString(children)
+                if err != nil {return nil, err}
+            }
+
+            person := &entity.Person{
+                Name: name,
+                Parents: p,
+                Children: c,
+            }
+            return person, nil
+        }
+        return nil, result.Err()
+    })
+    if err != nil {return nil, err}
+
+    asserted, ok := person.(*entity.Person)
+    if !ok {
+        return nil, nil
+    }
+	
+	return asserted, nil
 }
 
 // Add creates a new Person in the database with label and attribute name.
@@ -104,25 +150,13 @@ func (p *Person) Clear() error {
 	return nil
 }
 
-func (p *Person) HelloWorld() error {
-	greeting, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            "CREATE (a:Greeting) SET a.message = $message RETURN a.message + ', from node ' + id(a)",
-            map[string]interface{}{"message": "hello, world"})
-        if err != nil {
-            return nil, err
-        }
-
-        if result.Next() {
-            return result.Record().GetByIndex(0), nil
-        }
-
-        return nil, result.Err()
-    })
-    if err != nil {
-        return err
-	}
-	
-	fmt.Println(greeting.(string))
-	return nil
+func parseInterfaceToString(i interface{}) (s []string, err error){
+    converted, ok := i.([]interface{})
+    if !ok {
+        return nil, fmt.Errorf("Argument is not a slice")
+    }
+    for _, v := range converted {
+        s = append(s, v.(string))
+    }
+    return
 }
