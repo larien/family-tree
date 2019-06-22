@@ -65,8 +65,13 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
         return nil, result.Err()
     })
     if err != nil {return nil, err}
+
+    asserted, ok := person.(*entity.Person)
+    if !ok {
+        return nil, nil
+    }
 	
-	return person.(*entity.Person), nil
+	return asserted, nil
 }
 
 // Add creates a new Person in the database with label and attribute name.
