@@ -6,6 +6,7 @@ import (
 	"github.com/larien/family-tree/repository"
 	"github.com/larien/family-tree/controller"
 	"github.com/larien/family-tree/delivery"
+	"github.com/larien/family-tree/middlewares/config"
 )
 
 func main(){
@@ -21,8 +22,11 @@ func main(){
 	c := controller.New(r)
 	log.Println("Controller layer created")
 
-	delivery.New(c)
+	router := delivery.New(c)
 	log.Println("Delivery layer created")
+
+	router.Run(config.Port)
+	log.Printf("Running router on port %s", config.Port)
 
 	r.DB.Session.Close()
 	r.DB.Driver.Close()
