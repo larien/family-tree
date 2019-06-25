@@ -16,7 +16,7 @@ type Controllers struct {
 // Each Controllers dependency is placed according to each domain.
 func New(repository *r.Repositories) *Controllers {
 	return &Controllers{
-		Person: newPersonController(),
+		Person: newPersonController(repository.Person),
 		// implement controllers domains here
 	}
 }
