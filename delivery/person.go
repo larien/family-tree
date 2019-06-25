@@ -12,6 +12,7 @@ type Person struct {
 }
 
 func person(version *gin.RouterGroup, controller c.PersonController){
+	log.Println("Person delivery started")
 	person := &Person{
 		Controller: controller,
 	}
@@ -22,14 +23,13 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	}
 }
 
-// findAll handles GET /person requests and returns all People from database.
+// findAll handles GET /person requests and returns all People.
 func (p *Person) findAll(c *gin.Context) {
-	// people, _ := p.Controller.GetAll()
+	people, _ := p.Controller.FindAll()
 
 	c.JSON(
 		http.StatusOK,
-		"hello",
-		// people,
+		people,
 	)
 }
 
