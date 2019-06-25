@@ -3,6 +3,7 @@ package delivery
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"log"
 	c "github.com/larien/family-tree/controller"
 )
 
