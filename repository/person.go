@@ -2,8 +2,8 @@ package repository
 
 import (
     "github.com/larien/family-tree/entity"
-	"github.com/neo4j/neo4j-go-driver/neo4j"
-	"log"
+    "github.com/neo4j/neo4j-go-driver/neo4j"
+    "log"
     "fmt"
 )
 
@@ -24,12 +24,13 @@ type Person struct {
 // domain to be used by external layers.
 type PersonRepository interface {
     Retrieve(string) (*entity.Person, error)
+    RetrieveAll() ([]entity.Person, error)
     Add(string) error
     Parent(string, string) error
     Clear() error
 }
 
-// Retrieve returns a Person from the database..
+// Retrieve returns a Person from the database.
 func (p *Person) Retrieve(name string) (*entity.Person, error) {
     query := fmt.Sprintf("MATCH (n: Person {name: '%s'}) RETURN n.parents as parents, n.children as children", name)
     person, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
@@ -72,6 +73,56 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
     }
 	
 	return asserted, nil
+}
+
+
+// RetrieveAll returns all People from the database.
+func (p *Person) RetrieveAll() (people []entity.Person, err error) {
+    query := fmt.Sprintf("MATCH (n) RETURN n.name as name, n.parents as parents, n.children as children")
+    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{})
+        if err != nil {
+            return nil, err
+        }
+        for result.Next() {
+            record := result.Record()
+            fmt.Printf("%+v\n", record)
+
+            name, ok := record.Get("name")
+            if !ok {return nil, fmt.Errorf("Couldn't get name")}
+
+            parents, ok := record.Get("parents")
+            if !ok {return nil, fmt.Errorf("Couldn't get children")}
+            children, ok := record.Get("children")
+            if !ok {return nil, fmt.Errorf("Couldn't get children")}
+
+            var p []string
+            if parents != nil {
+            p, err = parseInterfaceToString(parents)
+            if err != nil {return nil, err}
+            }
+
+            var c []string
+            if children != nil {
+                c, err = parseInterfaceToString(children)
+                if err != nil {return nil, err}
+            }
+
+            person := entity.Person{
+                Name: name.(string),
+                Parents: p,
+                Children: c,
+            }
+
+            people = append(people, person)
+        }
+        return nil, result.Err()
+    })
+    if err != nil {return nil, err}
+	fmt.Println(people)
+	return nil, nil
 }
 
 // Add creates a new Person in the database with label and attribute name.

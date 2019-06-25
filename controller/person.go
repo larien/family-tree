@@ -26,5 +26,5 @@ type PersonController interface {
 
 // FindAll returns all registered People.
 func (p *Person) FindAll() ([]*entity.Person, error){
-	return p.Repository.RetrieveAll(), nil
+	return p.Repository.RetrieveAll()
 }
