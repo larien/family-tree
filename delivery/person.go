@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"log"
+	"github.com/larien/family-tree/entity"
 	c "github.com/larien/family-tree/controller"
 )
 
@@ -21,6 +22,7 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	endpoints := version.Group("/person")
 	{
 		endpoints.GET("", person.findAll)
+		endpoints.POST("", person.add)
 	}
 }
 
@@ -34,3 +36,26 @@ func (p *Person) findAll(c *gin.Context) {
 	)
 }
 
+// add handles POST /person requests and adds People and its relationships.
+func (p *Person) add(c *gin.Context) {
+	log.Println("Add")
+	var people []entity.Person
+
+	if err := c.BindJSON(&people); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"status":  http.StatusBadRequest,
+				"message": "Failed to parse json",
+				"error":   err,
+			})
+		return
+	}
+
+	c.JSON(
+		http.StatusCreated,
+		gin.H{
+			"status":  http.StatusCreated,
+			"message": "People registered successfully!",
+		})
+}
