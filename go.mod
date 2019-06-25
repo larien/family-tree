@@ -5,4 +5,5 @@ require (
 	github.com/gin-gonic/gin v1.4.0
 	github.com/neo4j-drivers/gobolt v1.7.4 // indirect
 	github.com/neo4j/neo4j-go-driver v1.7.4
+	github.com/stretchr/testify v1.3.0
 )
