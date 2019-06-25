@@ -75,24 +75,22 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
 	return asserted, nil
 }
 
-
 // RetrieveAll returns all People from the database.
-func (p *Person) RetrieveAll() (people []entity.Person, err error) {
+func (p *Person) RetrieveAll() ([]entity.Person, error) {
     query := fmt.Sprintf("MATCH (n) RETURN n.name as name, n.parents as parents, n.children as children")
-    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+    people, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
         result, err := transaction.Run(
             query,
             map[string]interface{}{})
         if err != nil {
             return nil, err
         }
+        people := []entity.Person{}
         for result.Next() {
             record := result.Record()
-            fmt.Printf("%+v\n", record)
 
             name, ok := record.Get("name")
             if !ok {return nil, fmt.Errorf("Couldn't get name")}
-
             parents, ok := record.Get("parents")
             if !ok {return nil, fmt.Errorf("Couldn't get children")}
             children, ok := record.Get("children")
@@ -115,14 +113,18 @@ func (p *Person) RetrieveAll() (people []entity.Person, err error) {
                 Parents: p,
                 Children: c,
             }
-
             people = append(people, person)
         }
-        return nil, result.Err()
+        return people, result.Err()
     })
     if err != nil {return nil, err}
-	fmt.Println(people)
-	return nil, nil
+
+    asserted, ok := people.([]entity.Person)
+    if !ok {
+        return nil, nil
+    }
+
+	return asserted, nil
 }
 
 // Add creates a new Person in the database with label and attribute name.
