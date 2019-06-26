@@ -44,6 +44,9 @@ func (p *Person) Add(people []entity.Person) error {
 		}
 		log.Printf("Registering %s's parents", person.Name)
 		for _, parent := range person.Parents {
+			if relationshipExists(parent, person.Parents){
+				continue
+			}
 			retrievedParent, err := p.Repository.Retrieve(parent)
 			if err != nil {return err }
 
@@ -59,6 +62,9 @@ func (p *Person) Add(people []entity.Person) error {
 		
 		log.Printf("Registering %s's children", person.Name)
 		for _, child := range person.Children {
+			if relationshipExists(child, person.Children){
+				continue
+			}
 			retrievedChild, err := p.Repository.Retrieve(child)
 			if err != nil {return err }
 
@@ -75,4 +81,15 @@ func (p *Person) Add(people []entity.Person) error {
 	}
 
 	return nil
+}
+
+// relatinshopExists verify if the relationship already exists
+// in the Person's data to prevent them to be duplicated.
+func relationshipExists(newName string, names []string) bool {
+	for _, name := range names {
+		if newName == name {
+			return false
+		}
+	}
+	return true
 }
