@@ -10,26 +10,19 @@ import (
 
 	"github.com/larien/family-tree/repository"
 	"github.com/larien/family-tree/controller"
+	"github.com/larien/family-tree/delivery"
 	"github.com/larien/family-tree/entity"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPersonEndpoints(t *testing.T) {
+func Test_UC1_AddPerson(t *testing.T) {
 	r, err := repository.New()
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	c := controller.New(r)
 
-	router := New(c)
-
-	t.Run("should GET all People", func(t *testing.T) {
-		r.Person.Clear()
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/person", nil)
-		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	router := delivery.New(c)
 
 	t.Run("should have created resource", func(t *testing.T) {
 		r.Person.Clear()
@@ -65,6 +58,43 @@ func TestPersonEndpoints(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
+
+	r.Person.Clear()
+	r.DB.Session.Close()
+	r.DB.Driver.Close()
+}
+
+
+func Test_UC2_FindAllPeople(t *testing.T) {
+	r, err := repository.New()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	c := controller.New(r)
+
+	router := delivery.New(c)
+
+	t.Run("should GET all People", func(t *testing.T) {
+		r.Person.Clear()
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/person", nil)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	r.Person.Clear()
+	r.DB.Session.Close()
+	r.DB.Driver.Close()
+}
+
+func Test_UC3_FindPerson(t *testing.T) {
+	r, err := repository.New()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	c := controller.New(r)
+
+	router := delivery.New(c)
 
 	t.Run("should GET a Person", func(t *testing.T) {
 		r.Person.Clear()
