@@ -23,13 +23,14 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	endpoints := version.Group("/person")
 	{
 		endpoints.GET("", person.findAll)
-		endpoints.GET(":name", person.find)
+		endpoints.GET("/:name", person.find)
 		endpoints.POST("", person.add)
 	}
 }
 
 // findAll handles GET /person requests and returns all People.
 func (p *Person) findAll(c *gin.Context) {
+	log.Println("Finding all People")
 	people, err := p.Controller.FindAll()
 	if err != nil {
 		c.JSON(
@@ -60,6 +61,7 @@ func (p *Person) findAll(c *gin.Context) {
 // find handles GET /person/:id requests and return the Person.
 func (p *Person) find(c *gin.Context) {
 	name := c.Param("name")
+	log.Printf("Finding %s\n", name)
 	person, err := p.Controller.Find(name)
 	if err != nil {
 		c.JSON(
@@ -75,7 +77,7 @@ func (p *Person) find(c *gin.Context) {
 		c.JSON(
 			http.StatusNoContent,
 			gin.H{
-				"message": fmt.Sprintf("Failed to find %s", name),
+				"message": fmt.Sprintf("%s wasn't found", name),
 			})
 		return
 	}
