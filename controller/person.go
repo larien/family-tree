@@ -28,6 +28,7 @@ type PersonController interface {
 	Find(string) (*entity.Person, error)
 	FamilyTree(string) ([]entity.FamilyTree, error)
 	Add([]entity.Person) error
+	Restore(string) (error)
 }
 
 // FindAll returns all registered People.
@@ -42,12 +43,14 @@ func (p *Person) Find(name string) (*entity.Person, error){
 
 // FamilyTree returns the Person's family tree.
 func (p *Person) FamilyTree(name string) ([]entity.FamilyTree, error){
-	log.Println("Getting family tree")
+	log.Printf("Getting %s's family tree", name)
+
+	filename := "dump.json"
 
 	people, err := p.Repository.RetrieveAll()
 	if err != nil {return []entity.FamilyTree{}, err}
 
-	err = dump(people)
+	err = dump(people, filename)
 	if err != nil {return []entity.FamilyTree{}, err}
 
 	// 2 - get people without children
@@ -56,19 +59,42 @@ func (p *Person) FamilyTree(name string) ([]entity.FamilyTree, error){
 		// 2.3 if not, remove all people without children
 			// repeat 2
 	
-	err = p.Person.Clear()
+	err = p.Repository.Clear()
 	if err != nil {return []entity.FamilyTree{}, err}
 
-	// restore database
+	err = p.Restore(filename)
+
 	err = removeDump()
 	if err != nil {return []entity.FamilyTree{}, err}
 
 	return []entity.FamilyTree{}, nil
 }
 
-func dump(people []entity.Person) error {
-	filename := "dump.json"
+// Restore restores People from the system from a dump file.
+func (p *Person) Restore(filename string) error{
+	people, err := readDump(filename)
+	if err != nil {return err}
 
+	return p.Add(people)
+}
+
+// readDump opens the dump file and restores it to the memory.
+func readDump(filename string) ([]entity.Person, error) {
+	jsonFile, err := os.Open(filename)
+	if err != nil {return nil, err}
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {return nil, err}
+
+	var people []entity.Person
+
+	err = json.Unmarshal(byteValue, &people)
+	if err != nil {return nil, err}
+
+	return people, nil
+}
+
+func dump(people []entity.Person, filename string) error {
 	peopleJSON, err := json.Marshal(people)
 	if err != nil {return err}
 
