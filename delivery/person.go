@@ -23,7 +23,8 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	endpoints := version.Group("/person")
 	{
 		endpoints.GET("", person.findAll)
-		endpoints.GET("/:name", person.find)
+		endpoints.GET("/name/:name", person.find)
+		endpoints.GET("/family-tree/:name", person.familyTree)
 		endpoints.POST("", person.add)
 	}
 }
@@ -58,7 +59,7 @@ func (p *Person) findAll(c *gin.Context) {
 }
 
 
-// find handles GET /person/:id requests and return the Person.
+// find handles GET /person/name/:name requests and return the Person.
 func (p *Person) find(c *gin.Context) {
 	name := c.Param("name")
 	log.Printf("Finding %s\n", name)
@@ -118,4 +119,35 @@ func (p *Person) add(c *gin.Context) {
 		gin.H{
 			"message": "People registered successfully!",
 		})
+}
+
+// find handles GET /family-tree/:name requests and return the Person's
+// family tree.
+func (p *Person) familyTree(c *gin.Context) {
+	name := c.Param("name")
+	log.Printf("Getting %s's family tree\n", name)
+	family, err := p.Controller.FamilyTree(name)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"message": fmt.Sprintf("Failed to find %s's family tree", name),
+				"error":   err,
+			})
+		return
+	}
+
+	if family == nil {
+		c.JSON(
+			http.StatusNoContent,
+			gin.H{
+				"message": fmt.Sprintf("%s wasn't found", name),
+			})
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		family,
+	)
 }
