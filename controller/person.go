@@ -22,12 +22,18 @@ type Person struct {
 // domain to be used by external layers.
 type PersonController interface {
 	FindAll() ([]entity.Person, error)
+	Find(string) (*entity.Person, error)
 	Add([]entity.Person) error
 }
 
 // FindAll returns all registered People.
 func (p *Person) FindAll() ([]entity.Person, error){
 	return p.Repository.RetrieveAll()
+}
+
+// Find returns the Person data registered.
+func (p *Person) Find(name string) (*entity.Person, error){
+	return p.Repository.Retrieve(name)
 }
 
 // Add requests People and their relationships to be registered in the database.
