@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"log"
+	"fmt"
 	"github.com/larien/family-tree/entity"
 	c "github.com/larien/family-tree/controller"
 )
@@ -22,17 +23,66 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	endpoints := version.Group("/person")
 	{
 		endpoints.GET("", person.findAll)
+		endpoints.GET(":name", person.find)
 		endpoints.POST("", person.add)
 	}
 }
 
 // findAll handles GET /person requests and returns all People.
 func (p *Person) findAll(c *gin.Context) {
-	people, _ := p.Controller.FindAll()
+	people, err := p.Controller.FindAll()
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"message": "Failed to find all people",
+				"error":   err,
+			})
+		return
+	}
+
+	if people == nil {
+		c.JSON(
+			http.StatusNoContent,
+			gin.H{
+				"message": "No people were found",
+			})
+		return
+	}
 
 	c.JSON(
 		http.StatusOK,
 		people,
+	)
+}
+
+
+// find handles GET /person/:id requests and return the Person.
+func (p *Person) find(c *gin.Context) {
+	name := c.Param("name")
+	person, err := p.Controller.Find(name)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"message": fmt.Sprintf("Failed to find %s", name),
+				"error":   err,
+			})
+		return
+	}
+
+	if person == nil {
+		c.JSON(
+			http.StatusNoContent,
+			gin.H{
+				"message": fmt.Sprintf("Failed to find %s", name),
+			})
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		person,
 	)
 }
 
@@ -44,7 +94,6 @@ func (p *Person) add(c *gin.Context) {
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{
-				"status":  http.StatusBadRequest,
 				"message": "Failed to parse json",
 				"error":   err,
 			})
@@ -56,7 +105,6 @@ func (p *Person) add(c *gin.Context) {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"status":  http.StatusInternalServerError,
 				"message": "Failed register people",
 				"error":   err,
 			})
@@ -66,7 +114,6 @@ func (p *Person) add(c *gin.Context) {
 	c.JSON(
 		http.StatusCreated,
 		gin.H{
-			"status":  http.StatusCreated,
 			"message": "People registered successfully!",
 		})
 }
