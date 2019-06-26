@@ -52,6 +52,18 @@ func (p *Person) add(c *gin.Context) {
 		return
 	}
 
+	err := p.Controller.Add(people)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Failed register people",
+				"error":   err,
+			})
+		return
+	}
+
 	c.JSON(
 		http.StatusCreated,
 		gin.H{
