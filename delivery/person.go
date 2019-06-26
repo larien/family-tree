@@ -38,7 +38,6 @@ func (p *Person) findAll(c *gin.Context) {
 
 // add handles POST /person requests and adds People and its relationships.
 func (p *Person) add(c *gin.Context) {
-	log.Println("Add")
 	var people []entity.Person
 
 	if err := c.BindJSON(&people); err != nil {
