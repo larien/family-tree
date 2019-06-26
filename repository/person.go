@@ -32,7 +32,7 @@ type PersonRepository interface {
 
 // Retrieve returns a Person from the database.
 func (p *Person) Retrieve(name string) (*entity.Person, error) {
-    query := fmt.Sprintf("MATCH (n: Person {name: '%s'}) RETURN n.parents as parents, n.children as children", name)
+    query := fmt.Sprintf("MATCH (n: Person {name: '%s'}) RETURN n.name as name, n.parents as parents, n.children as children", name)
     person, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
         result, err := transaction.Run(
             query,
@@ -42,14 +42,20 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
         }
         for result.Next() {
             record := result.Record()
+            
+            name, ok := record.Get("name")
+            if !ok {return nil, fmt.Errorf("Couldn't get name")}
             parents, ok := record.Get("parents")
             if !ok {return nil, fmt.Errorf("Couldn't get children")}
             children, ok := record.Get("children")
             if !ok {return nil, fmt.Errorf("Couldn't get children")}
+ 
+            var p []string
+            if parents != nil {
+                p, err = parseInterfaceToString(parents)
+                if err != nil {return nil, err}
+            }
             
-            p, err := parseInterfaceToString(parents)
-            if err != nil {return nil, err}
-
             var c []string
             if children != nil {
                 c, err = parseInterfaceToString(children)
@@ -57,7 +63,7 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
             }
 
             person := &entity.Person{
-                Name: name,
+                Name: name.(string),
                 Parents: p,
                 Children: c,
             }
@@ -71,7 +77,7 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
     if !ok {
         return nil, nil
     }
-	
+    fmt.Println(asserted)
 	return asserted, nil
 }
 

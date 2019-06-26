@@ -38,7 +38,6 @@ func (p *Person) findAll(c *gin.Context) {
 
 // add handles POST /person requests and adds People and its relationships.
 func (p *Person) add(c *gin.Context) {
-	log.Println("Add")
 	var people []entity.Person
 
 	if err := c.BindJSON(&people); err != nil {
@@ -47,6 +46,18 @@ func (p *Person) add(c *gin.Context) {
 			gin.H{
 				"status":  http.StatusBadRequest,
 				"message": "Failed to parse json",
+				"error":   err,
+			})
+		return
+	}
+
+	err := p.Controller.Add(people)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Failed register people",
 				"error":   err,
 			})
 		return
