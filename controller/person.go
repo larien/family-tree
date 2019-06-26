@@ -22,9 +22,57 @@ type Person struct {
 // domain to be used by external layers.
 type PersonController interface {
 	FindAll() ([]entity.Person, error)
+	Add([]entity.Person) error
 }
 
 // FindAll returns all registered People.
 func (p *Person) FindAll() ([]entity.Person, error){
 	return p.Repository.RetrieveAll()
+}
+
+// Add requests People and their relationships to be registered in the database.
+func (p *Person) Add(people []entity.Person) error {
+	for _, person := range people {
+		log.Printf("Registering %s", person.Name)
+		retrievedPerson, err := p.Repository.Retrieve(person.Name)
+		if err != nil {return err}
+		
+		if retrievedPerson == nil {
+			if err := p.Repository.Add(person.Name); err != nil {
+				return err
+			}
+		}
+		log.Printf("Registering %s's parents", person.Name)
+		for _, parent := range person.Parents {
+			retrievedParent, err := p.Repository.Retrieve(parent)
+			if err != nil {return err }
+
+			if retrievedParent == nil {
+				if err := p.Repository.Add(parent); err != nil {
+					return err
+				}
+			}
+
+			err = p.Repository.Parent(parent, person.Name)
+			if err != nil {return err }
+		}
+		
+		log.Printf("Registering %s's children", person.Name)
+		for _, child := range person.Children {
+			retrievedChild, err := p.Repository.Retrieve(child)
+			if err != nil {return err }
+
+			if retrievedChild == nil {
+				if err := p.Repository.Add(child); err != nil {
+					return err
+				}
+			}
+
+			err = p.Repository.Parent(person.Name, child)
+			if err != nil {return err }
+		}
+		log.Printf("Registered %s", person.Name)
+	}
+
+	return nil
 }
