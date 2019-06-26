@@ -4,6 +4,6 @@ package entity
 // their parents and their children.
 type Person struct {
 	Name string `json:"name"`
-	Parents []string `json:"parents"`
-	Children []string `json:"children"`
+	Parents []string `json:"parents, omitempty"`
+	Children []string `json:"children, omitempty"`
 }
