@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"os"
 	r "github.com/larien/family-tree/repository"
 	"github.com/larien/family-tree/entity"
 )
@@ -41,16 +44,44 @@ func (p *Person) Find(name string) (*entity.Person, error){
 func (p *Person) FamilyTree(name string) ([]entity.FamilyTree, error){
 	log.Println("Getting family tree")
 
-	// 1 - dump database and save to backup.json
+	people, err := p.Repository.RetrieveAll()
+	if err != nil {return []entity.FamilyTree{}, err}
+
+	err = dump(people)
+	if err != nil {return []entity.FamilyTree{}, err}
+
 	// 2 - get people without children
 		// 2.1 - verify if name is between these people
 		// 2.2 - if so, parse all relationships to FamilyTree
 		// 2.3 if not, remove all people without children
 			// repeat 2
-	// clear database
+	
+	err = p.Person.Clear()
+	if err != nil {return []entity.FamilyTree{}, err}
+
 	// restore database
+	err = removeDump()
+	if err != nil {return []entity.FamilyTree{}, err}
 
 	return []entity.FamilyTree{}, nil
+}
+
+func dump(people []entity.Person) error {
+	filename := "dump.json"
+
+	peopleJSON, err := json.Marshal(people)
+	if err != nil {return err}
+
+	err = ioutil.WriteFile(filename, peopleJSON, 0644)
+	if err != nil {return err}
+
+	log.Printf("Dump saved to %s", filename)
+
+	return nil
+}
+
+func removeDump() error {
+	return os.Remove("dump.json")
 }
 
 // Add requests People and their relationships to be registered in the database.
