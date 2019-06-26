@@ -51,6 +51,38 @@ func TestPersonEndpoints(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
+	t.Run("shouldn't create resource because of invalid payload", func(t *testing.T) {
+		w := httptest.NewRecorder()
+
+		payload := fmt.Sprintf(`{
+				"invalid": "parse"
+			}`)
+		req, err := http.NewRequest(http.MethodPost, "/api/v1/person", strings.NewReader(payload))
+		router.ServeHTTP(w, req)
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("should GET a Person", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		payload := fmt.Sprintf(`[
+			{
+				"name": "Leia"
+			},
+		]`)
+		req, err := http.NewRequest(http.MethodPost, "/api/v1/person", strings.NewReader(payload))
+		router.ServeHTTP(w, req)
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		req, err = http.NewRequest(http.MethodGet, "/api/v1/person/Leia", nil)
+		router.ServeHTTP(w, req)
+		var people *entity.Person
+		assert.Nil(t, err)
+		json.NewDecoder(w.Body).Decode(&people)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
 	r.DB.Session.Close()
 	r.DB.Driver.Close()
 }
