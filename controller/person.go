@@ -23,6 +23,7 @@ type Person struct {
 type PersonController interface {
 	FindAll() ([]entity.Person, error)
 	Find(string) (*entity.Person, error)
+	FamilyTree(string) ([]entity.FamilyTree, error)
 	Add([]entity.Person) error
 }
 
@@ -34,6 +35,22 @@ func (p *Person) FindAll() ([]entity.Person, error){
 // Find returns the Person data registered.
 func (p *Person) Find(name string) (*entity.Person, error){
 	return p.Repository.Retrieve(name)
+}
+
+// FamilyTree returns the Person's family tree.
+func (p *Person) FamilyTree(name string) ([]entity.FamilyTree, error){
+	log.Println("Getting family tree")
+
+	// 1 - dump database and save to backup.json
+	// 2 - get people without children
+		// 2.1 - verify if name is between these people
+		// 2.2 - if so, parse all relationships to FamilyTree
+		// 2.3 if not, remove all people without children
+			// repeat 2
+	// clear database
+	// restore database
+
+	return []entity.FamilyTree{}, nil
 }
 
 // Add requests People and their relationships to be registered in the database.

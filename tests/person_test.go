@@ -112,7 +112,7 @@ func Test_UC3_FindPerson(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 
 		w = httptest.NewRecorder()
-		req, err = http.NewRequest(http.MethodGet, "/api/v1/person/Leia", nil)
+		req, err = http.NewRequest(http.MethodGet, "/api/v1/person/name/Leia", nil)
 		router.ServeHTTP(w, req)
 		var people entity.Person
 		assert.Nil(t, err)
@@ -122,6 +122,28 @@ func Test_UC3_FindPerson(t *testing.T) {
 		assert.Equal(t, parents, people.Parents)
 		children := []string{"Ben"}
 		assert.Equal(t, children, people.Children)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	r.Person.Clear()
+	r.DB.Session.Close()
+	r.DB.Driver.Close()
+}
+
+func Test_UC4_FamilyTree(t *testing.T) {
+	r, err := repository.New()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	c := controller.New(r)
+
+	router := delivery.New(c)
+
+	t.Run("should get Person's family tree", func(t *testing.T) {
+		r.Person.Clear()
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/person", nil)
+		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
