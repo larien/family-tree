@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestPersonEndpoints(t *testing.T) {
 	r, err := repository.New()
 	if err != nil {
@@ -96,6 +95,7 @@ func TestPersonEndpoints(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
+	r.Person.Clear()
 	r.DB.Session.Close()
 	r.DB.Driver.Close()
 }
