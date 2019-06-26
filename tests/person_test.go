@@ -10,18 +10,19 @@ import (
 
 	"github.com/larien/family-tree/repository"
 	"github.com/larien/family-tree/controller"
+	"github.com/larien/family-tree/delivery"
 	"github.com/larien/family-tree/entity"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPersonEndpoints(t *testing.T) {
+func TestPersonIntegration(t *testing.T) {
 	r, err := repository.New()
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	c := controller.New(r)
 
-	router := New(c)
+	router := delivery.New(c)
 
 	t.Run("should GET all People", func(t *testing.T) {
 		r.Person.Clear()

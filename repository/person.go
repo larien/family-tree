@@ -77,7 +77,6 @@ func (p *Person) Retrieve(name string) (*entity.Person, error) {
     if !ok {
         return nil, nil
     }
-    fmt.Println(asserted)
 	return asserted, nil
 }
 
