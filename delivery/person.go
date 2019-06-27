@@ -24,7 +24,7 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 	{
 		endpoints.GET("", person.findAll)
 		endpoints.GET("/name/:name", person.find)
-		endpoints.GET("/family-tree/:name", person.familyTree)
+		endpoints.GET("/ascendancy/:name", person.ascendancy)
 		endpoints.POST("", person.add)
 	}
 }
@@ -121,23 +121,23 @@ func (p *Person) add(c *gin.Context) {
 		})
 }
 
-// find handles GET /family-tree/:name requests and return the Person's
-// family tree.
-func (p *Person) familyTree(c *gin.Context) {
+// find handles GET /ascendancy/:name requests and return the Person's
+// ascendancy.
+func (p *Person) ascendancy(c *gin.Context) {
 	name := c.Param("name")
-	log.Printf("Getting %s's family tree\n", name)
-	family, err := p.Controller.FamilyTree(name)
+
+	ascendants, err := p.Controller.Ascendancy(name)
 	if err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"message": fmt.Sprintf("Failed to find %s's family tree", name),
+				"message": fmt.Sprintf("Failed to find %s's ascendancy", name),
 				"error":   err,
 			})
 		return
 	}
 
-	if family == nil {
+	if ascendants == nil {
 		c.JSON(
 			http.StatusNoContent,
 			gin.H{
@@ -148,6 +148,6 @@ func (p *Person) familyTree(c *gin.Context) {
 
 	c.JSON(
 		http.StatusOK,
-		family,
+		ascendants,
 	)
 }

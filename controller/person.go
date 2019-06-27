@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"io/ioutil"
+	"fmt"
 	"log"
 	"os"
 	r "github.com/larien/family-tree/repository"
@@ -26,7 +27,7 @@ type Person struct {
 type PersonController interface {
 	FindAll() ([]entity.Person, error)
 	Find(string) (*entity.Person, error)
-	FamilyTree(string) ([]entity.FamilyTree, error)
+	Ascendancy(string) ([]entity.Person, error)
 	Add([]entity.Person) error
 	Restore(string) (error)
 }
@@ -41,33 +42,54 @@ func (p *Person) Find(name string) (*entity.Person, error){
 	return p.Repository.Retrieve(name)
 }
 
-// FamilyTree returns the Person's family tree.
-func (p *Person) FamilyTree(name string) ([]entity.FamilyTree, error){
-	log.Printf("Getting %s's family tree", name)
+// Ascendancy returns the Person's family tree.
+func (p *Person) Ascendancy(name string) ([]entity.Person, error){
+	log.Printf("Getting %s's ascendancy", name)
 
 	filename := "dump.json"
 
 	people, err := p.Repository.RetrieveAll()
-	if err != nil {return []entity.FamilyTree{}, err}
-
+	if err != nil {return []entity.Person{}, err}
 	err = dump(people, filename)
-	if err != nil {return []entity.FamilyTree{}, err}
+	if err != nil {return []entity.Person{}, err}
 
-	// 2 - get people without children
-		// 2.1 - verify if name is between these people
-		// 2.2 - if so, parse all relationships to FamilyTree
-		// 2.3 if not, remove all people without children
-			// repeat 2
-	
+	person, err := p.Repository.Retrieve(name)
+	if err != nil {return []entity.Person{}, err}
+
+	if person == nil {
+		return []entity.Person{}, fmt.Errorf("%s wasn't found", name)
+	}
+	for {
+		children, err := p.Repository.Children(name)
+		if err != nil {return []entity.Person{}, err}
+		if children == nil {
+			break
+		}
+
+		err = p.Repository.DeleteWithoutChildren()
+		if err != nil {return []entity.Person{}, err}
+	}
+
+	connectedNames, err := p.Repository.Connected(name)
+	if err != nil {return []entity.Person{}, err} 
+
 	err = p.Repository.Clear()
-	if err != nil {return []entity.FamilyTree{}, err}
-
+	if err != nil {return []entity.Person{}, err}
 	err = p.Restore(filename)
+	if err != nil {return []entity.Person{}, err}
+	
+	ascendants := []entity.Person{}
+	for _, connectedName := range connectedNames {
+		person, err := p.Repository.Retrieve(connectedName)
+		if err != nil {return []entity.Person{}, err}
 
+		ascendants = append(ascendants, *person)
+	}
+	
 	err = removeDump()
-	if err != nil {return []entity.FamilyTree{}, err}
+	if err != nil {return []entity.Person{}, err}
 
-	return []entity.FamilyTree{}, nil
+	return ascendants, nil
 }
 
 // Restore restores People from the system from a dump file.
@@ -124,7 +146,10 @@ func (p *Person) Add(people []entity.Person) error {
 		}
 		log.Printf("Registering %s's parents", person.Name)
 		for _, parent := range person.Parents {
-			if relationshipExists(parent, person.Parents){
+			retrievedPerson, err := p.Repository.Retrieve(person.Name)
+			if err != nil {return err}
+		
+			if relationshipExists(parent, retrievedPerson.Parents){
 				continue
 			}
 			retrievedParent, err := p.Repository.Retrieve(parent)
@@ -135,16 +160,21 @@ func (p *Person) Add(people []entity.Person) error {
 					return err
 				}
 			}
-
 			err = p.Repository.Parent(parent, person.Name)
 			if err != nil {return err }
+			
 		}
 		
 		log.Printf("Registering %s's children", person.Name)
 		for _, child := range person.Children {
-			if relationshipExists(child, person.Children){
+			retrievedPerson, err := p.Repository.Retrieve(person.Name)
+			if err != nil {return err}
+
+			if relationshipExists(child, retrievedPerson.Children){
+				fmt.Println("Pais: ", retrievedPerson.Children)
 				continue
 			}
+
 			retrievedChild, err := p.Repository.Retrieve(child)
 			if err != nil {return err }
 
@@ -153,9 +183,9 @@ func (p *Person) Add(people []entity.Person) error {
 					return err
 				}
 			}
-
 			err = p.Repository.Parent(person.Name, child)
 			if err != nil {return err }
+			
 		}
 		log.Printf("Registered %s", person.Name)
 	}
@@ -168,8 +198,8 @@ func (p *Person) Add(people []entity.Person) error {
 func relationshipExists(newName string, names []string) bool {
 	for _, name := range names {
 		if newName == name {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
