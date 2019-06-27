@@ -125,8 +125,8 @@ func (p *Person) add(c *gin.Context) {
 // ascendancy.
 func (p *Person) ascendancy(c *gin.Context) {
 	name := c.Param("name")
-	log.Printf("Getting %s's ascendancy\n", name)
-	family, err := p.Controller.Ascendancy(name)
+
+	ascendants, err := p.Controller.Ascendancy(name)
 	if err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
@@ -137,7 +137,7 @@ func (p *Person) ascendancy(c *gin.Context) {
 		return
 	}
 
-	if family == nil {
+	if ascendants == nil {
 		c.JSON(
 			http.StatusNoContent,
 			gin.H{
@@ -148,6 +148,6 @@ func (p *Person) ascendancy(c *gin.Context) {
 
 	c.JSON(
 		http.StatusOK,
-		family,
+		ascendants,
 	)
 }
