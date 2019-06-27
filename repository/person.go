@@ -3,6 +3,8 @@ package repository
 import (
     "github.com/larien/family-tree/entity"
     "github.com/neo4j/neo4j-go-driver/neo4j"
+    "encoding/json"
+    "io/ioutil"
     "log"
     "fmt"
 )
@@ -23,14 +25,190 @@ type Person struct {
 // PersonRepository defines the method available from Person Repository
 // domain to be used by external layers.
 type PersonRepository interface {
+    Add(string) error
+    Backup(string) error
+    Children(string) ([]string, error)
+    Clear() error
+    Connected(string) ([]string, error)
+    DeleteWithoutChildren() error
+    Parent(string, string) error
     Retrieve(string) (*entity.Person, error)
     RetrieveAll() ([]entity.Person, error)
-    DeleteWithoutChildren() error
-    Children(string) ([]string, error)
-    Add(string) error
-    Connected(string) ([]string, error)
-    Parent(string, string) error
-    Clear() error
+}
+
+
+// Add creates a new Person in the database with label and attribute name.
+func (p *Person) Add(name string) error {
+    query := fmt.Sprintf("CREATE (%s:Person) SET %s.name = $name;", name, name)
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{"name": name},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// Backup realizes a backup from the current data in the database.
+func (p *Person) Backup(filename string) error {
+	people, err := p.RetrieveAll()
+	if err != nil {return err}
+	
+	return dump(people, filename)
+}
+
+// Children returns the current Person's children.
+func (p *Person) Children(name string) ([]string, error) {
+    query := fmt.Sprintf("MATCH (n:Person)-[:PARENT]->(m) WHERE n.name = '%s' RETURN DISTINCT collect(m.name) as names;", name)
+    peopleNames, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{})
+        if err != nil {
+            return nil, err
+        }
+        var peopleNames []string
+        for result.Next() {
+            record := result.Record()
+
+            names, ok := record.Get("names")
+            if !ok {return nil, fmt.Errorf("Couldn't get names")}
+
+            var n []string
+            if names != nil {
+                n, err = parseInterfaceToString(names)
+                if err != nil {return nil, err}
+            }
+
+            peopleNames = n
+        }
+        return peopleNames, result.Err()
+    })
+    if err != nil {return nil, err}
+
+    asserted, ok := peopleNames.([]string)
+    if !ok {
+        return nil, nil
+    }
+
+	return asserted, nil
+}
+
+// Clear removes all nodes and relationships from the database.
+func (p *Person) Clear() error {
+    query := `MATCH (n) DETACH DELETE n`
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// Connected returns all People connected to a Person from the database.
+func (p *Person) Connected(name string) ([]string, error) {
+    query := fmt.Sprintf("MATCH (u:Person)-[:PARENT*0..]-(connected:Person) WHERE u.name = '%s' RETURN DISTINCT collect(connected.name) as names;", name)
+    peopleNames, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{})
+        if err != nil {
+            return nil, err
+        }
+        var peopleNames []string
+        for result.Next() {
+            record := result.Record()
+
+            names, ok := record.Get("names")
+            if !ok {return nil, fmt.Errorf("Couldn't get names")}
+
+            var n []string
+            if names != nil {
+                n, err = parseInterfaceToString(names)
+                if err != nil {return nil, err}
+            }
+
+            peopleNames = n
+        }
+        return peopleNames, result.Err()
+    })
+    if err != nil {return nil, err}
+
+    asserted, ok := peopleNames.([]string)
+    if !ok {
+        return nil, nil
+    }
+
+	return asserted, nil
+}
+
+// DeleteWithoutChildren deletes all People without children that have parents.
+func (p *Person) DeleteWithoutChildren() error {
+    query := fmt.Sprintf("MATCH (a:Person) WHERE not ((a)-[:PARENT]->(:Person)) AND ()-[:PARENT]->(a) DETACH DELETE a;")
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// Parent creates a new property to the received Person.
+func (p *Person) Parent(parent, child string) error {
+    // create parent-child relationship
+    query := fmt.Sprintf("MATCH (a:Person {name:'%s'}), (b:Person {name:'%s'}) CREATE (a)-[:PARENT]->(b)", parent, child)
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+
+    // create parents attribute in child
+    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.parents = COALESCE(n.parents, []) + '%s'", child, parent)
+    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+
+    // create children attribute in parent
+    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.children = COALESCE(n.children, []) + '%s'", parent, child)
+    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+
+	return nil
 }
 
 // Retrieve returns a Person from the database.
@@ -135,171 +313,16 @@ func (p *Person) RetrieveAll() ([]entity.Person, error) {
 	return asserted, nil
 }
 
+// dump creates a backup file to save current data.
+func dump(people []entity.Person, filename string) error {
+	peopleJSON, err := json.Marshal(people)
+	if err != nil {return err}
 
-// Connected returns all People connected to a Person from the database.
-func (p *Person) Connected(name string) ([]string, error) {
-    query := fmt.Sprintf("MATCH (u:Person)-[:PARENT*0..]-(connected:Person) WHERE u.name = '%s' RETURN DISTINCT collect(connected.name) as names;", name)
-    peopleNames, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{})
-        if err != nil {
-            return nil, err
-        }
-        var peopleNames []string
-        for result.Next() {
-            record := result.Record()
+	err = ioutil.WriteFile(filename, peopleJSON, 0644)
+	if err != nil {return err}
 
-            names, ok := record.Get("names")
-            if !ok {return nil, fmt.Errorf("Couldn't get names")}
+	log.Printf("Dump saved to %s", filename)
 
-            var n []string
-            if names != nil {
-                n, err = parseInterfaceToString(names)
-                if err != nil {return nil, err}
-            }
-
-            peopleNames = n
-        }
-        return peopleNames, result.Err()
-    })
-    if err != nil {return nil, err}
-
-    asserted, ok := peopleNames.([]string)
-    if !ok {
-        return nil, nil
-    }
-
-	return asserted, nil
-}
-
-
-// Children returns the current Person's children.
-func (p *Person) Children(name string) ([]string, error) {
-    query := fmt.Sprintf("MATCH (n:Person)-[:PARENT]->(m) WHERE n.name = '%s' RETURN DISTINCT collect(m.name) as names;", name)
-    peopleNames, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{})
-        if err != nil {
-            return nil, err
-        }
-        var peopleNames []string
-        for result.Next() {
-            record := result.Record()
-
-            names, ok := record.Get("names")
-            if !ok {return nil, fmt.Errorf("Couldn't get names")}
-
-            var n []string
-            if names != nil {
-                n, err = parseInterfaceToString(names)
-                if err != nil {return nil, err}
-            }
-
-            peopleNames = n
-        }
-        return peopleNames, result.Err()
-    })
-    if err != nil {return nil, err}
-
-    asserted, ok := peopleNames.([]string)
-    if !ok {
-        return nil, nil
-    }
-
-	return asserted, nil
-}
-
-// Add creates a new Person in the database with label and attribute name.
-func (p *Person) Add(name string) error {
-    query := fmt.Sprintf("CREATE (%s:Person) SET %s.name = $name;", name, name)
-    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{"name": name},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
-	return nil
-}
-
-// DeleteWithoutChildren deletes all People without children that have parents.
-func (p *Person) DeleteWithoutChildren() error {
-    query := fmt.Sprintf("MATCH (a:Person) WHERE not ((a)-[:PARENT]->(:Person)) AND ()-[:PARENT]->(a) DETACH DELETE a;")
-    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
-	return nil
-}
-
-// Parent creates a new property to the received Person.
-func (p *Person) Parent(parent, child string) error {
-    // create parent-child relationship
-    query := fmt.Sprintf("MATCH (a:Person {name:'%s'}), (b:Person {name:'%s'}) CREATE (a)-[:PARENT]->(b)", parent, child)
-    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
-
-    // create parents attribute in child
-    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.parents = COALESCE(n.parents, []) + '%s'", child, parent)
-    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
-
-    // create children attribute in parent
-    query = fmt.Sprintf("MERGE (n: Person {name: '%s'}) SET n.children = COALESCE(n.children, []) + '%s'", parent, child)
-    _, err = p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
-
-	return nil
-}
-
-// Clear removes all nodes and relationships from the database.
-func (p *Person) Clear() error {
-    query := `MATCH (n) DETACH DELETE n`
-    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
-        result, err := transaction.Run(
-            query,
-            map[string]interface{}{},
-        )
-        if err != nil {return nil, err}
-        if result.Next() {return result.Record().GetByIndex(0), nil}
-        return nil, result.Err()
-    })
-    if err != nil {return err}
 	return nil
 }
 
