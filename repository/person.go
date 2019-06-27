@@ -27,6 +27,7 @@ type PersonRepository interface {
     RetrieveAll() ([]entity.Person, error)
     DeleteWithoutChildren() error
     Add(string) error
+    Connected(string) ([]string, error)
     Parent(string, string) error
     Clear() error
 }
@@ -126,6 +127,44 @@ func (p *Person) RetrieveAll() ([]entity.Person, error) {
     if err != nil {return nil, err}
 
     asserted, ok := people.([]entity.Person)
+    if !ok {
+        return nil, nil
+    }
+
+	return asserted, nil
+}
+
+
+// Connected returns all People connected to a Person from the database.
+func (p *Person) Connected(name string) ([]string, error) {
+    query := fmt.Sprintf("MATCH (u:Person)-[:PARENT*0..]-(connected:Person) WHERE u.name = '%s' RETURN DISTINCT collect(connected.name) as names;", name)
+    peopleNames, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{})
+        if err != nil {
+            return nil, err
+        }
+        var peopleNames []string
+        for result.Next() {
+            record := result.Record()
+
+            names, ok := record.Get("names")
+            if !ok {return nil, fmt.Errorf("Couldn't get names")}
+
+            var n []string
+            if names != nil {
+                n, err = parseInterfaceToString(names)
+                if err != nil {return nil, err}
+            }
+
+            peopleNames = n
+        }
+        return peopleNames, result.Err()
+    })
+    if err != nil {return nil, err}
+
+    asserted, ok := peopleNames.([]string)
     if !ok {
         return nil, nil
     }
