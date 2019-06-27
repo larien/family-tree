@@ -34,7 +34,7 @@ type PersonController interface {
 // Add requests People and their relationships to be registered in the database.
 func (p *Person) Add(people []entity.Person) error {
 	for _, person := range people {
-		err = p.RegisterPerson(person.Name)
+		err := p.RegisterPerson(person.Name)
 		if err != nil {return err}
 
 		err = p.RegisterParents(person.Name, person.Parents)
@@ -43,7 +43,7 @@ func (p *Person) Add(people []entity.Person) error {
 		err = p.RegisterChildren(person.Name, person.Children)
 		if err != nil {return err}
 
-		log.Printf("Registered %s", name)
+		log.Printf("Registered %s", person.Name)
 	}
 
 	return nil
@@ -118,7 +118,7 @@ func (p *Person) Register(related string, person *entity.Person) error {
 // RegisterPerson registers the Person if it doesn't exist in
 // the database.
 func (p *Person) RegisterPerson(name string) error {
-	log.Printf("Registering %s", person.Name)
+	log.Printf("Registering %s", name)
 	retrievedPerson, err := p.Repository.Retrieve(name)
 	if err != nil {return err}
 		
@@ -148,9 +148,9 @@ func (p *Person) RegisterParents(name string, parents []string) error {
 }
 
 // RegisterChildren register the Person's children.
-func (p *Person) RegisterChildren(name string, parents []string) error {
+func (p *Person) RegisterChildren(name string, children []string) error {
 	log.Printf("Registering %s's children", name)
-	for _, child := range person.Children {
+	for _, child := range children {
 		retrievedPerson, err := p.Repository.Retrieve(name)
 		if err != nil {return err}
 
