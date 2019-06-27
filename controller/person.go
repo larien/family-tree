@@ -112,7 +112,7 @@ func (p *Person) Register(related string, person *entity.Person) error {
 			return err
 		}
 	}
-	return p.Repository.Parent(person.Name, related)
+	return nil
 }
 
 // RegisterPerson registers the Person if it doesn't exist in
@@ -143,6 +143,9 @@ func (p *Person) RegisterParents(name string, parents []string) error {
 
 			err = p.Register(parent, retrievedPerson)
 			if err != nil {return err}
+
+			err = p.Repository.Parent(parent, name)
+			if err != nil {return err}
 		}
 	return nil
 }
@@ -160,6 +163,9 @@ func (p *Person) RegisterChildren(name string, children []string) error {
 
 		err = p.Register(child, retrievedPerson)
 		if err != nil {return err}
+
+		err = p.Repository.Parent(name, child)
+			if err != nil {return err}
 	}
 	return nil
 }
