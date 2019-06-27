@@ -1,2 +1,2 @@
 # family-tree
-Project with Go and Neo4j for Mundipagg's test.
+Project with Go and Neo4j.
