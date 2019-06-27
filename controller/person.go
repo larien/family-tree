@@ -48,44 +48,36 @@ func (p *Person) Ascendancy(name string) ([]entity.Person, error){
 
 	filename := "dump.json"
 
-	// 1. fazer dump da base atual
 	people, err := p.Repository.RetrieveAll()
 	if err != nil {return []entity.Person{}, err}
-	fmt.Printf("Pessoas no início do dump: %+v", people)
 	err = dump(people, filename)
 	if err != nil {return []entity.Person{}, err}
 
+	person, err := p.Repository.Retrieve(name)
+	if err != nil {return []entity.Person{}, err}
+
+	if person == nil {
+		return []entity.Person{}, fmt.Errorf("%s wasn't found", name)
+	}
 	for {
-		// 2. dar Retrieve no nome e verificar se ele tem filhos
-		person, err := p.Repository.Retrieve(name)
+		children, err := p.Repository.Children(name)
 		if err != nil {return []entity.Person{}, err}
-
-		if person == nil {
-			return []entity.Person{}, fmt.Errorf("%s wasn't found", name)
-		}
-
-		if person.Children == nil {
+		if children == nil {
 			break
 		}
 
-		// 3. se houver, DeleteWithoutChildren até não ter
 		err = p.Repository.DeleteWithoutChildren()
 		if err != nil {return []entity.Person{}, err}
 	}
 
-	// 4. quando não tiver, usar Connected
 	connectedNames, err := p.Repository.Connected(name)
 	if err != nil {return []entity.Person{}, err} 
 
-	// 5. Limpar base
 	err = p.Repository.Clear()
 	if err != nil {return []entity.Person{}, err}
-
-	// 6. Restore tudo
 	err = p.Restore(filename)
 	if err != nil {return []entity.Person{}, err}
-
-	// 7. Usar Retrieve no array de Connected
+	
 	ascendants := []entity.Person{}
 	for _, connectedName := range connectedNames {
 		person, err := p.Repository.Retrieve(connectedName)
@@ -158,7 +150,6 @@ func (p *Person) Add(people []entity.Person) error {
 			if err != nil {return err}
 		
 			if relationshipExists(parent, retrievedPerson.Parents){
-				fmt.Println("Pais: ", retrievedPerson.Parents)
 				continue
 			}
 			retrievedParent, err := p.Repository.Retrieve(parent)
