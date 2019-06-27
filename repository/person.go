@@ -25,6 +25,7 @@ type Person struct {
 type PersonRepository interface {
     Retrieve(string) (*entity.Person, error)
     RetrieveAll() ([]entity.Person, error)
+    DeleteWithoutChildren() error
     Add(string) error
     Parent(string, string) error
     Clear() error
@@ -139,6 +140,22 @@ func (p *Person) Add(name string) error {
         result, err := transaction.Run(
             query,
             map[string]interface{}{"name": name},
+        )
+        if err != nil {return nil, err}
+        if result.Next() {return result.Record().GetByIndex(0), nil}
+        return nil, result.Err()
+    })
+    if err != nil {return err}
+	return nil
+}
+
+// DeleteWithoutChildren deletes all People without children that have parents.
+func (p *Person) DeleteWithoutChildren() error {
+    query := fmt.Sprintf("MATCH (a:Person) WHERE not ((a)-[:PARENT]->(:Person)) AND ()-[:PARENT]->(a) DETACH DELETE a;")
+    _, err := p.DB.Session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
+        result, err := transaction.Run(
+            query,
+            map[string]interface{}{},
         )
         if err != nil {return nil, err}
         if result.Next() {return result.Record().GetByIndex(0), nil}
