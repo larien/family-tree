@@ -31,7 +31,6 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 
 // findAll handles GET /person requests and returns all People.
 func (p *Person) findAll(c *gin.Context) {
-	log.Println("Finding all People")
 	people, err := p.Controller.FindAll()
 	if err != nil {
 		c.JSON(
@@ -62,7 +61,7 @@ func (p *Person) findAll(c *gin.Context) {
 // find handles GET /person/name/:name requests and return the Person.
 func (p *Person) find(c *gin.Context) {
 	name := c.Param("name")
-	log.Printf("Finding %s\n", name)
+	
 	person, err := p.Controller.Find(name)
 	if err != nil {
 		c.JSON(
