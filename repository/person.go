@@ -3,6 +3,8 @@ package repository
 import (
     "github.com/larien/family-tree/entity"
     "github.com/neo4j/neo4j-go-driver/neo4j"
+    "encoding/json"
+    "io/ioutil"
     "log"
     "fmt"
 )
@@ -31,6 +33,7 @@ type PersonRepository interface {
     Connected(string) ([]string, error)
     Parent(string, string) error
     Clear() error
+    Backup(string) error
 }
 
 // Retrieve returns a Person from the database.
@@ -300,6 +303,27 @@ func (p *Person) Clear() error {
         return nil, result.Err()
     })
     if err != nil {return err}
+	return nil
+}
+
+// Backup realizes a backup from the current data in the database.
+func (p *Person) Backup(filename string) error {
+	people, err := p.RetrieveAll()
+	if err != nil {return err}
+	
+	return dump(people, filename)
+}
+
+// dump creates a backup file to save current data.
+func dump(people []entity.Person, filename string) error {
+	peopleJSON, err := json.Marshal(people)
+	if err != nil {return err}
+
+	err = ioutil.WriteFile(filename, peopleJSON, 0644)
+	if err != nil {return err}
+
+	log.Printf("Dump saved to %s", filename)
+
 	return nil
 }
 
