@@ -7,9 +7,3 @@ type Person struct {
 	Parents []string `json:"parents, omitempty"`
 	Children []string `json:"children, omitempty"`
 }
-
-// FamilyTree represents all the people related to a Person in ascendancy.
-type FamilyTree struct {
-	Name string `json:"name"`
-	Relationships []Person `json: "relationships"`
-}
