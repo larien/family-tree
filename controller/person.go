@@ -25,33 +25,43 @@ type Person struct {
 // PersonController defines the method available from Person Controller
 // domain to be used by external layers.
 type PersonController interface {
-	FindAll() ([]entity.Person, error)
 	Find(string) (*entity.Person, error)
-	Ascendancy(string) ([]entity.Person, error)
+	FindAll() ([]entity.Person, error)	
 	Add([]entity.Person) error
+	Ascendancy(string) ([]entity.Person, error)
 	Restore(string) (error)
 }
 
 // FindAll returns all registered People.
 func (p *Person) FindAll() ([]entity.Person, error){
+	log.Println("Finding all People")
+
 	return p.Repository.RetrieveAll()
 }
 
 // Find returns the Person data registered.
 func (p *Person) Find(name string) (*entity.Person, error){
+	log.Printf("Finding %s\n", name)
+
 	return p.Repository.Retrieve(name)
 }
 
-// Ascendancy returns the Person's family tree.
+// Ascendancy returns the Person's family tree. This algorithm works as
+// explained below:
+// We check if the Person where the ascendancy begins from exists.
+// Every People in the tree is retrieved in order to create a backup
+// file containing the current data. This is made because the data
+// inside the database will be changed.
+// We have to find a way to navigate between the parentship levels
+// in order to get ascendancy, so every children with no children
+// and with parents is deleted till the Person has no children.
+// This way, the generated graph is the connection between the
+// person and its ascendants.
+// Therefore, we do a search to get their ascendants and restore data.
 func (p *Person) Ascendancy(name string) ([]entity.Person, error){
 	log.Printf("Getting %s's ascendancy", name)
 
 	filename := "dump.json"
-
-	people, err := p.Repository.RetrieveAll()
-	if err != nil {return []entity.Person{}, err}
-	err = dump(people, filename)
-	if err != nil {return []entity.Person{}, err}
 
 	person, err := p.Repository.Retrieve(name)
 	if err != nil {return []entity.Person{}, err}
@@ -59,45 +69,68 @@ func (p *Person) Ascendancy(name string) ([]entity.Person, error){
 	if person == nil {
 		return []entity.Person{}, fmt.Errorf("%s wasn't found", name)
 	}
+
+	err = p.Repository.Backup(filename)
+	if err != nil {return []entity.Person{}, err}
+
+	err = p.Ascend(name)
+	if err != nil {return []entity.Person{}, err}
+
+	connectedNames, err := p.Repository.Connected(name)
+	if err != nil {return []entity.Person{}, err} 
+
+	err = p.Restore(filename)
+	if err != nil {return []entity.Person{}, err}
+	
+	return p.Ascendants(connectedNames)
+}
+
+// Ascend removes the lowest-level relationships in order to
+// ascent the parentship tree till it gets to the Person requested.
+func (p *Person) Ascend(name string) error {
 	for {
 		children, err := p.Repository.Children(name)
-		if err != nil {return []entity.Person{}, err}
+		if err != nil {return err}
+		
 		if children == nil {
 			break
 		}
 
 		err = p.Repository.DeleteWithoutChildren()
-		if err != nil {return []entity.Person{}, err}
+		if err != nil {return err}
 	}
 
-	connectedNames, err := p.Repository.Connected(name)
-	if err != nil {return []entity.Person{}, err} 
+	return nil
+}
 
-	err = p.Repository.Clear()
-	if err != nil {return []entity.Person{}, err}
-	err = p.Restore(filename)
-	if err != nil {return []entity.Person{}, err}
-	
-	ascendants := []entity.Person{}
+// Ascendants gets the People's connected relationships.
+func (p *Person) Ascendants(connectedNames []string) (ascendants []entity.Person, err error) {
 	for _, connectedName := range connectedNames {
 		person, err := p.Repository.Retrieve(connectedName)
 		if err != nil {return []entity.Person{}, err}
 
 		ascendants = append(ascendants, *person)
 	}
-	
-	err = removeDump()
-	if err != nil {return []entity.Person{}, err}
-
-	return ascendants, nil
+	return
 }
 
-// Restore restores People from the system from a dump file.
-func (p *Person) Restore(filename string) error{
+// Restore restores People from the dump file.
+func (p *Person) Restore(filename string) error {
+	err := p.Repository.Clear()
+	if err != nil {return err}
+
 	people, err := readDump(filename)
 	if err != nil {return err}
 
-	return p.Add(people)
+	err = p.Add(people)
+	if err != nil {return err}
+
+	log.Printf("Database restored from %s", filename)
+
+	err = os.Remove(filename)
+	if err != nil {return err}
+
+	return nil
 }
 
 // readDump opens the dump file and restores it to the memory.
@@ -116,22 +149,6 @@ func readDump(filename string) ([]entity.Person, error) {
 	return people, nil
 }
 
-func dump(people []entity.Person, filename string) error {
-	peopleJSON, err := json.Marshal(people)
-	if err != nil {return err}
-
-	err = ioutil.WriteFile(filename, peopleJSON, 0644)
-	if err != nil {return err}
-
-	log.Printf("Dump saved to %s", filename)
-
-	return nil
-}
-
-func removeDump() error {
-	return os.Remove("dump.json")
-}
-
 // Add requests People and their relationships to be registered in the database.
 func (p *Person) Add(people []entity.Person) error {
 	for _, person := range people {
@@ -144,6 +161,7 @@ func (p *Person) Add(people []entity.Person) error {
 				return err
 			}
 		}
+
 		log.Printf("Registering %s's parents", person.Name)
 		for _, parent := range person.Parents {
 			retrievedPerson, err := p.Repository.Retrieve(person.Name)
@@ -152,17 +170,7 @@ func (p *Person) Add(people []entity.Person) error {
 			if relationshipExists(parent, retrievedPerson.Parents){
 				continue
 			}
-			retrievedParent, err := p.Repository.Retrieve(parent)
-			if err != nil {return err }
-
-			if retrievedParent == nil {
-				if err := p.Repository.Add(parent); err != nil {
-					return err
-				}
-			}
-			err = p.Repository.Parent(parent, person.Name)
-			if err != nil {return err }
-			
+			p.Register(parent, retrievedPerson)
 		}
 		
 		log.Printf("Registering %s's children", person.Name)
@@ -171,26 +179,27 @@ func (p *Person) Add(people []entity.Person) error {
 			if err != nil {return err}
 
 			if relationshipExists(child, retrievedPerson.Children){
-				fmt.Println("Pais: ", retrievedPerson.Children)
 				continue
 			}
-
-			retrievedChild, err := p.Repository.Retrieve(child)
-			if err != nil {return err }
-
-			if retrievedChild == nil {
-				if err := p.Repository.Add(child); err != nil {
-					return err
-				}
-			}
-			err = p.Repository.Parent(person.Name, child)
-			if err != nil {return err }
-			
+			p.Register(child, retrievedPerson)
 		}
 		log.Printf("Registered %s", person.Name)
 	}
 
 	return nil
+}
+
+// Register register the relationship to the Person.
+func (p *Person) Register(related string, person *entity.Person) error {
+	retrieved, err := p.Repository.Retrieve(related)
+	if err != nil {return err }
+
+	if retrieved == nil {
+		if err := p.Repository.Add(related); err != nil {
+			return err
+		}
+	}
+	return p.Repository.Parent(person.Name, related)
 }
 
 // relatinshopExists verify if the relationship already exists
