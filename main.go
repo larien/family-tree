@@ -16,9 +16,13 @@ func main(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	
-	log.Println("Repository layer created")
+	defer func(){
+		r.DB.Session.Close()
+		r.DB.Driver.Close()
+	}()
 
+	log.Println("Repository layer created")
+	
 	c := controller.New(r)
 	log.Println("Controller layer created")
 
@@ -28,6 +32,4 @@ func main(){
 	router.Run(config.Port)
 	log.Printf("Running router on port %s", config.Port)
 
-	r.DB.Session.Close()
-	r.DB.Driver.Close()
 }
