@@ -29,6 +29,7 @@ type PersonController interface {
 	Ascendancy(string) ([]entity.Person, error)
 	Find(string) (*entity.Person, error)
 	FindAll() ([]entity.Person, error)
+	Clear() error
 }
 
 // Add requests People and their relationships to be registered in the database.
@@ -100,6 +101,13 @@ func (p *Person) FindAll() ([]entity.Person, error){
 	log.Println("Finding all People")
 
 	return p.Repository.RetrieveAll()
+}
+
+// Clear is a helper function that cleans the database.
+func (p *Person) Clear() error {
+	log.Println("Cleaning database")
+
+	return p.Repository.Clear()
 }
 
 // Register register the relationship to the Person.

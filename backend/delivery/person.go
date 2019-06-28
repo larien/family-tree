@@ -26,6 +26,7 @@ func person(version *gin.RouterGroup, controller c.PersonController){
 		endpoints.GET("/name/:name", person.find)
 		endpoints.GET("/ascendancy/:name", person.ascendancy)
 		endpoints.POST("", person.add)
+		endpoints.GET("/clear", person.clear)
 	}
 }
 
@@ -149,4 +150,24 @@ func (p *Person) ascendancy(c *gin.Context) {
 		http.StatusOK,
 		ascendants,
 	)
+}
+
+// clear is a helper function that cleans the database.
+func (p *Person) clear(c *gin.Context) {
+	err := p.Controller.Clear()
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"message": fmt.Sprintf("Failed to clear database"),
+				"error":   err,
+			})
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		gin.H{
+			"message": "Database cleared sucessfully",
+		})
 }

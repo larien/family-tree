@@ -268,3 +268,38 @@ go test
 - **Sample Body:**
 
   `none`
+
+### [HELPER] Clear
+
+This is just to help while testing. It will clear every data.
+
+- **URL**
+
+  _localhost:8899/api/v1/person/clear_
+
+- **Method:**
+
+  `GET`
+
+- **URL Params**
+
+  `none`
+
+- **Data Params**
+
+  `none`
+
+- **Success Response:**
+
+  - **Code:** 200 OK <br />
+    **Content:** `{ "message": Database cleared sucessfully" }`
+
+- **Error Response:**
+
+  - **Description:** Server error <br />
+    **Code:** 500 Internal Server Error <br />
+    **Content:** `{ "message": "Failed to clear database" }`
+
+- **Sample Body:**
+
+  `none`
