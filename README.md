@@ -168,3 +168,47 @@ go test
 - **Sample Body:**
 
   `none`
+
+### Get Person
+
+- **URL**
+
+  _localhost:8899/api/v1/person/name/:name_
+
+- **Method:**
+
+  `GET`
+
+- **URL Params**
+
+  `name: string`
+
+- **Data Params**
+
+  `none`
+
+- **Success Response:**
+
+  - **Code:** 200 OK <br />
+    **Content:**
+
+    ```json
+    {
+      "name": "Bruce",
+      "parents": ["Mike", "Phoebe"],
+      "children": null
+    }
+    ```
+
+  - **Code:** 204 No Content <br />
+    **Content:** `{ "message": "{name} wasn't found" }`
+
+- **Error Response:**
+
+  - **Description:** Invalid JSON
+    **Code:** 500 Internal Server Error <br />
+    **Content:** `{ "message": "Failed to find {name}" }`
+
+- **Sample Body:**
+
+  `none`
