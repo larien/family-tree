@@ -4,9 +4,13 @@ Project with Go and Neo4j.
 
 ## Keywords
 
+---
+
 [Go, Neo4j, Clean Architecture]
 
 ## Requirements
+
+---
 
 - Docker
 - Docker-compose
@@ -15,9 +19,13 @@ Project with Go and Neo4j.
 
 ## Installation
 
+---
+
 `git clone https://github.com/larien/family-tree.git`
 
 ## Run application
+
+---
 
 ### Option 1: docker-compose [unstable]
 
@@ -33,7 +41,69 @@ make docker
 
 ## Running tests
 
+---
+
 ```bash
 cd backend/tests/
 go test
+```
+
+## Usage
+
+---
+
+### Add People
+
+- **URL**
+
+  _localhost:8899/api/v1/person_
+
+- **Method:**
+
+  `POST`
+
+- **URL Params**
+
+  `none`
+
+- **Data Params**
+
+  ```json
+  [
+    {
+      "name": "<name>",
+      "parents": ["<parent>", "<parent>"],
+      "children": ["<child>", "<child>"]
+    }
+  ]
+  ```
+
+- **Success Response:**
+
+  - **Code:** 201 CREATED <br />
+    **Content:** `{ "message": "People registered successfully!" }`
+
+- **Error Response:**
+
+  - **Description:** Invalid JSON
+    **Code:** 401 Bad Request <br />
+    **Content:** `{ "message": "Failed to parse json" }`
+
+  - **Description:** Invalid JSON
+    **Code:** 500 Internal Server Error <br />
+    **Content:** `{ "message": "Failed to register people" }`
+
+- **Sample Call:**
+
+```json
+[
+  {
+    "name": "Bruce",
+    "parents": ["Mike", "Phoebe"]
+  },
+  {
+    "name": "Dunny",
+    "parents": ["Mike", "Phoebe"]
+  }
+]
 ```
