@@ -24,7 +24,7 @@ func New(controllers *c.Controllers) *gin.Engine {
 	return router(person)
 }
 
-// router sets up routing for the app.
+// router sets up routing for the github.com/larien/family-tree.
 func router(deliveries *Deliveries) *gin.Engine {
 	router := gin.Default()
 	router.Use(cors.Default())

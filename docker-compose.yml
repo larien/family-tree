@@ -1,0 +1,36 @@
+version: "3.2"
+services:
+  neo4j:
+    image: neo4j:latest
+    network_mode: "bridge"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_dbms_shell_enabled=true
+      - NEO4J_AUTH=neo4j/1234
+    volumes:
+      - ./plugins:/plugins
+      - ./data:/data
+      - ./import:/import
+  backend:
+    image: "family-tree"
+    container_name: "api-go"
+    build: "./backend"
+    ports:
+      - "8899:8899"
+    volumes:
+      - "./backend:/go/src/github.com/larien/family-tree"
+    depends_on:
+      - "neo4j"
+    networks:
+      - neo4j_go_net
+
+networks:
+  neo4j_go_net:
+    driver: bridge
+
+volumes:
+  dgraph:
