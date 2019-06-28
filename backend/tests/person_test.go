@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/larien/family-tree/repository"
-	"github.com/larien/family-tree/controller"
-	"github.com/larien/family-tree/delivery"
-	"github.com/larien/family-tree/entity"
+	"github.com/larien/family-tree/backend/repository"
+	"github.com/larien/family-tree/backend/controller"
+	"github.com/larien/family-tree/backend/delivery"
+	"github.com/larien/family-tree/backend/entity"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -139,7 +139,7 @@ func Test_UC4_FamilyTree(t *testing.T) {
 
 	router := delivery.New(c)
 
-	t.Run("should get Person's family tree", func(t *testing.T) {
+	t.Run("should get Person's family tree", func(t *testing.T) { // TODO
 		r.Person.Clear()
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodGet, "/api/v1/person", nil)
