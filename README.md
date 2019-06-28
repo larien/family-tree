@@ -85,11 +85,11 @@ go test
 
 - **Error Response:**
 
-  - **Description:** Invalid JSON
+  - **Description:** Invalid JSON <br />
     **Code:** 401 Bad Request <br />
     **Content:** `{ "message": "Failed to parse json" }`
 
-  - **Description:** Invalid JSON
+  - **Description:** Server error <br />
     **Code:** 500 Internal Server Error <br />
     **Content:** `{ "message": "Failed to register people" }`
 
@@ -161,7 +161,7 @@ go test
 
 - **Error Response:**
 
-  - **Description:** Invalid JSON
+  - **Description:** Server error <br />
     **Code:** 500 Internal Server Error <br />
     **Content:** `{ "message": "Failed to find all people" }`
 
@@ -205,9 +205,65 @@ go test
 
 - **Error Response:**
 
-  - **Description:** Invalid JSON
+  - **Description:** Server error <br />
     **Code:** 500 Internal Server Error <br />
     **Content:** `{ "message": "Failed to find {name}" }`
+
+- **Sample Body:**
+
+  `none`
+
+### Ascendancy
+
+- **URL**
+
+  _localhost:8899/api/v1/person/ascendancy/:name_
+
+- **Method:**
+
+  `GET`
+
+- **URL Params**
+
+  `name: string`
+
+- **Data Params**
+
+  `none`
+
+- **Success Response:**
+
+  - **Code:** 200 OK <br />
+    **Content:**
+
+    ```json
+    [
+      {
+        "name": "Bruce",
+        "parents": ["Mike", "Phoebe"],
+        "children": null
+      },
+      {
+        "name": "Mike",
+        "parents": ["Sonny"],
+        "children": ["Bruce", "Dunny"]
+      },
+      {
+        "name": "Dunny",
+        "parents": ["Mike", "Phoebe"],
+        "children": null
+      }
+    ]
+    ```
+
+  - **Code:** 204 No Content <br />
+    **Content:** `{ "message": "{name} wasn't found" }`
+
+- **Error Response:**
+
+  - **Description:** Server error <br />
+    **Code:** 500 Internal Server Error <br />
+    **Content:** `{ "message": "Failed to find {name}'s ascendancy" }`
 
 - **Sample Body:**
 
