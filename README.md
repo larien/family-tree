@@ -93,7 +93,7 @@ go test
     **Code:** 500 Internal Server Error <br />
     **Content:** `{ "message": "Failed to register people" }`
 
-- **Sample Call:**
+- **Sample Body:**
 
 ```json
 [
@@ -107,3 +107,64 @@ go test
   }
 ]
 ```
+
+### Get All People
+
+- **URL**
+
+  _localhost:8899/api/v1/person_
+
+- **Method:**
+
+  `GET`
+
+- **URL Params**
+
+  `none`
+
+- **Data Params**
+
+  `none`
+
+- **Success Response:**
+
+  - **Code:** 200 OK <br />
+    **Content:**
+
+    ```json
+    [
+      {
+        "name": "Bruce",
+        "parents": ["Mike", "Phoebe"],
+        "children": null
+      },
+      {
+        "name": "Mike",
+        "parents": null,
+        "children": ["Bruce", "Dunny"]
+      },
+      {
+        "name": "Phoebe",
+        "parents": null,
+        "children": ["Bruce", "Dunny"]
+      },
+      {
+        "name": "Dunny",
+        "parents": ["Mike", "Phoebe"],
+        "children": null
+      }
+    ]
+    ```
+
+  - **Code:** 204 No Content <br />
+    **Content:** `{ "message": "No people were found" }`
+
+- **Error Response:**
+
+  - **Description:** Invalid JSON
+    **Code:** 500 Internal Server Error <br />
+    **Content:** `{ "message": "Failed to find all people" }`
+
+- **Sample Body:**
+
+  `none`
