@@ -107,7 +107,7 @@ func (p *Person) add(c *gin.Context) {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"message": "Failed register people",
+				"message": "Failed to register people",
 				"error":   err,
 			})
 		return
