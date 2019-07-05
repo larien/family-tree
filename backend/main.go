@@ -10,8 +10,6 @@ import (
 )
 
 func main(){
-	fmt.Println("Hello, Mundipagg!")
-
 	r, err := repository.New()
 	if err != nil {
 		log.Fatal(err)
